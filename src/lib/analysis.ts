@@ -13,7 +13,7 @@ export interface AnalysisResult {
   strengths: string[]
   improvements: string[]
   detailedAnalysis: {
-    careerAdvice: string  // Claudeからの回答全体を格納
+    careerAdvice: string
   }
 }
 

@@ -2,8 +2,6 @@ import { type TraitScore } from "./analysis"
 
 export async function analyzeWithClaude(traits: TraitScore[]): Promise<{
   careerAdvice: string
-  relationshipAdvice: string
-  selfImprovement: string
 }> {
   try {
     const response = await fetch('/api/analyze', {
