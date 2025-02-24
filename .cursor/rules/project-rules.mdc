@@ -1,0 +1,12 @@
+---
+description: project全体のルール
+globs: /**
+---
+
+# Project Rules
+
+- Use next.js's app router
+- Use Chadcn UI
+- Use Tailwind CSS
+- Use Framer Motion
+- Separate the components

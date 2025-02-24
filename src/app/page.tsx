@@ -1,101 +1,212 @@
-import Image from "next/image";
+'use client'
+
+import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
+import { useState } from "react"
+import QuestionCard from "@/components/QuestionCard"
+import { questions, traitDescriptions } from "@/data/questions"
+import { analyzeAnswers, type AnalysisResult } from "@/lib/analysis"
+import { Progress } from "@/components/ui/progress"
+import { Loader2 } from "lucide-react"
+import PersonalityChart from "@/components/PersonalityChart"
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [step, setStep] = useState(0)
+  const [answers, setAnswers] = useState<Record<number, string>>({})
+  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  
+  const questionGroups = Array.from({ length: Math.ceil(questions.length / 3) }, (_, i) =>
+    questions.slice(i * 3, (i + 1) * 3)
+  )
+  
+  const currentGroup = questionGroups[step - 1]
+  const progress = step === 0 ? 0 : (step / questionGroups.length) * 100
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleAnswer = (questionId: number, value: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: value
+    }))
+  }
+
+  const isGroupComplete = (group: typeof questions) => {
+    return group.every(q => answers[q.id])
+  }
+
+  const handleComplete = async () => {
+    try {
+      const analysisResult = await analyzeAnswers(questions, answers)
+      setResult(analysisResult)
+      setStep(questionGroups.length + 1)
+    } catch (error) {
+      console.error(error)
+      // エラー処理を追加
+    }
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-2xl mx-auto"
+      >
+        <h1 className="text-4xl font-bold text-center mb-8">
+          パーソナリティ分析ツール
+        </h1>
+        
+        {step > 0 && step <= questionGroups.length && (
+          <div className="mb-6">
+            <div className="flex justify-between text-sm text-gray-500 mb-2">
+              <span>セクション {step} / {questionGroups.length}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
+
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          {step === 0 ? (
+            <>
+              <p className="text-lg text-center mb-6">
+                就活・婚活に活かせる、あなたの強みを発見しましょう
+              </p>
+              <div className="text-center">
+                <Button 
+                  onClick={() => setStep(1)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  診断を開始する
+                </Button>
+              </div>
+            </>
+          ) : step <= questionGroups.length ? (
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-8"
+            >
+              {currentGroup.map(question => (
+                <div key={question.id}>
+                  <QuestionCard
+                    question={question.text}
+                    options={question.options}
+                    value={answers[question.id] || ''}
+                    onChange={(value) => handleAnswer(question.id, value)}
+                  />
+                </div>
+              ))}
+              
+              <div className="mt-6 flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(step - 1)}
+                  disabled={step === 1 || isLoading}
+                >
+                  前のセクション
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (step === questionGroups.length) {
+                      setIsLoading(true)
+                      try {
+                        await handleComplete()
+                      } finally {
+                        setIsLoading(false)
+                      }
+                    } else {
+                      setStep(step + 1)
+                    }
+                  }}
+                  disabled={!isGroupComplete(currentGroup) || isLoading}
+                >
+                  {step === questionGroups.length ? (
+                    isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        分析中...
+                      </>
+                    ) : (
+                      '結果を見る'
+                    )
+                  ) : (
+                    '次のセクション'
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          ) : isLoading ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="py-12 text-center"
+            >
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <h2 className="text-2xl font-bold mb-2">分析中...</h2>
+              <p className="text-gray-600">
+                あなたの回答を詳しく分析しています。
+                <br />
+                しばらくお待ちください。
+              </p>
+            </motion.div>
+          ) : result ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-6"
+            >
+              <h2 className="text-2xl font-bold mb-8 text-center">分析結果</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* 左カラム: 特性の詳細 */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-center">特性の詳細</h3>
+                  
+                  <PersonalityChart traits={result.traits} />
+                  
+                  <div className="space-y-4">
+                    {result.traits.map(trait => (
+                      <div key={trait.trait} className="border-b pb-4">
+                        <h4 className="font-medium">
+                          {traitDescriptions[trait.trait as keyof typeof traitDescriptions]} 
+                          <span className="text-gray-500 ml-2">
+                            (スコア: {trait.score.toFixed(1)})
+                          </span>
+                        </h4>
+                        <p className="text-gray-600">{trait.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 右カラム: AIによる分析 */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-center">AIによる分析</h3>
+                  <div className="bg-blue-50 p-6 rounded-lg">
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {result.detailedAnalysis.careerAdvice}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => {
+                  setStep(0)
+                  setAnswers({})
+                  setResult(null)
+                }}
+                className="mt-6"
+                disabled={isLoading}
+              >
+                もう一度診断する
+              </Button>
+            </motion.div>
+          ) : null}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </motion.div>
     </div>
-  );
+  )
 }
