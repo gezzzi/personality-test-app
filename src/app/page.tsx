@@ -69,7 +69,7 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-lg p-6">
           {step === 0 ? (
             <>
-              <p className="text-lg text-center mb-6">
+              <p className="text-lg text-center mb-6 dark:text-gray-400">
                 就活・婚活に活かせる、あなたの強みを発見しましょう
               </p>
               <div className="text-center">
