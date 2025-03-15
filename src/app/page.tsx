@@ -75,7 +75,7 @@ export default function Home() {
               <div className="text-center">
                 <Button 
                   onClick={() => setStep(1)}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 dark:text-white"
                 >
                   診断を開始する
                 </Button>
